@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learning Objective Document Generator</title>
+<style>
+  :root {
+    --ink: #1a1d24;
+    --ink-soft: #4a5060;
+    --paper: #fafaf7;
+    --rule: #d8d4c8;
+    --rule-soft: #ebe7db;
+    --accent: #6b4423;
+    --accent-soft: #f0e6d2;
+    --warn: #8b3a2a;
+    --good: #3a6b3a;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 16px;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 48px 28px 80px;
+  }
+  header {
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 18px;
+    margin-bottom: 36px;
+  }
+  header h1 {
+    font-size: 32px;
+    font-weight: 400;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  header p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 15px;
+    font-style: italic;
+  }
+  section {
+    margin-bottom: 32px;
+    padding-bottom: 28px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  section:last-of-type { border-bottom: none; }
+  h2 {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin: 0 0 14px;
+  }
+  h2 .num {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    background: var(--accent);
+    color: var(--paper);
+    border-radius: 50%;
+    font-size: 11px;
+    margin-right: 8px;
+    vertical-align: 1px;
+  }
+  label.inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  input[type=file] {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    width: 100%;
+    max-width: 520px;
+  }
+  input[type=file]::file-selector-button {
+    background: var(--ink);
+    color: var(--paper);
+    border: none;
+    padding: 6px 12px;
+    margin-right: 12px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .toolbar {
+    display: flex;
+    gap: 4px;
+    background: #f5f1e8;
+    border: 1px solid var(--rule);
+    border-bottom: none;
+    padding: 6px;
+    border-radius: 3px 3px 0 0;
+  }
+  .toolbar button {
+    width: 32px;
+    height: 28px;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    cursor: pointer;
+    font-family: Georgia, serif;
+    font-size: 14px;
+    color: var(--ink);
+    transition: background 0.12s;
+  }
+  .toolbar button:hover { background: var(--accent-soft); }
+  .toolbar button:active { background: var(--accent); color: var(--paper); }
+  .toolbar button .b { font-weight: bold; }
+  .toolbar button .i { font-style: italic; }
+  .toolbar button .u { text-decoration: underline; }
+  .editor {
+    min-height: 90px;
+    padding: 12px 14px;
+    border: 1px solid var(--rule);
+    background: white;
+    border-radius: 0 0 3px 3px;
+    font-family: Georgia, serif;
+    font-size: 15px;
+    line-height: 1.5;
+    outline: none;
+    overflow-y: auto;
+    max-height: 240px;
+  }
+  .editor:focus { border-color: var(--accent); }
+  .editor:empty::before {
+    content: attr(data-placeholder);
+    color: #b8b2a3;
+    font-style: italic;
+  }
+  .row {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field label {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+  }
+  select {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    min-width: 180px;
+    cursor: pointer;
+  }
+  select:focus { outline: none; border-color: var(--accent); }
+  .actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  button.primary, button.secondary {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 12px 22px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: transform 0.08s, background 0.12s;
+  }
+  button.primary {
+    background: var(--ink);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+  }
+  button.primary:hover:not(:disabled) {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  button.primary:active:not(:disabled) { transform: translateY(1px); }
+  button.primary:disabled {
+    background: #c5c0b3;
+    border-color: #c5c0b3;
+    cursor: not-allowed;
+  }
+  button.secondary {
+    background: white;
+    color: var(--ink);
+    border: 1px solid var(--ink);
+  }
+  button.secondary:hover { background: var(--accent-soft); }
+  .status {
+    font-size: 14px;
+    color: var(--ink-soft);
+    font-style: italic;
+  }
+  .status.error { color: var(--warn); font-style: normal; font-weight: 500; }
+  .status.success { color: var(--good); font-style: normal; }
+  #text2Container.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .preview-frame {
+    margin-top: 18px;
+    border: 1px solid var(--rule);
+    background: white;
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 0;
+    border-radius: 3px;
+    box-shadow: inset 0 1px 4px rgba(0,0,0,0.04);
+  }
+  .preview-frame .docx-wrapper {
+    background: transparent !important;
+    padding: 20px !important;
+  }
+  .preview-frame .docx {
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+    margin: 0 auto !important;
+  }
+  #previewSection { display: none; }
+  .hint {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-top: 6px;
+    font-style: italic;
+  }
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Learning Objective Document Generator</h1>
+  <p>Fill in the placeholders, choose a font, and generate a Word document.</p>
+</header>
+
+<section>
+  <h2><span class="num">1</span>Template file</h2>
+  <input type="file" id="fileInput" accept=".docx">
+  <div class="hint">Upload the template that contains <code>{Text1}</code> and <code>{Text2}</code> placeholders.</div>
+</section>
+
+<section>
+  <h2><span class="num">2</span>Learning Objective text (Text 1)</h2>
+  <div class="toolbar" data-target="text1Editor">
+    <button type="button" data-cmd="bold" title="Bold (Ctrl+B)"><span class="b">B</span></button>
+    <button type="button" data-cmd="italic" title="Italic (Ctrl+I)"><span class="i">I</span></button>
+    <button type="button" data-cmd="underline" title="Underline (Ctrl+U)"><span class="u">U</span></button>
+  </div>
+  <div id="text1Editor" class="editor" contenteditable="true"
+       data-placeholder="Type the Learning Objective. Press Enter for a new line. Use the buttons above (or Ctrl+B / I / U) for bold, italic, underline."></div>
+</section>
+
+<section>
+  <h2><span class="num">3</span>Task box (Text 2)</h2>
+  <div class="toggle-row">
+    <label class="inline">
+      <input type="checkbox" id="useText2" checked>
+      <span>Include the task box</span>
+    </label>
+    <span class="hint">Uncheck to remove the task box from every block.</span>
+  </div>
+  <div id="text2Container">
+    <div class="toolbar" data-target="text2Editor">
+      <button type="button" data-cmd="bold" title="Bold"><span class="b">B</span></button>
+      <button type="button" data-cmd="italic" title="Italic"><span class="i">I</span></button>
+      <button type="button" data-cmd="underline" title="Underline"><span class="u">U</span></button>
+    </div>
+    <div id="text2Editor" class="editor" contenteditable="true"
+         data-placeholder="Type the task text."></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">4</span>Font &amp; size</h2>
+  <div class="row">
+    <div class="field">
+      <label for="fontSelect">Font</label>
+      <select id="fontSelect">
+        <option value="Calibri">Calibri</option>
+        <option value="Arial" selected>Arial</option>
+        <option value="Times New Roman">Times New Roman</option>
+        <option value="Cambria">Cambria</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Verdana">Verdana</option>
+        <option value="Tahoma">Tahoma</option>
+        <option value="Trebuchet MS">Trebuchet MS</option>
+        <option value="Comic Sans MS">Comic Sans MS</option>
+        <option value="Century Gothic">Century Gothic</option>
+        <option value="Garamond">Garamond</option>
+        <option value="Sassoon Primary">Sassoon Primary</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="sizeSelect">Size (pt)</label>
+      <select id="sizeSelect">
+        <option>8</option><option>9</option><option>10</option>
+        <option selected>11</option><option>12</option><option>14</option>
+        <option>16</option><option>18</option><option>20</option>
+        <option>22</option><option>24</option><option>28</option>
+      </select>
+    </div>
+  </div>
+  <div class="hint">Applied to the text you've inserted (Learning Objective and Task). Bold, italic and underline are preserved.</div>
+</section>
+
+<section>
+  <h2><span class="num">5</span>Generate</h2>
+  <div class="actions">
+    <button type="button" id="generateBtn" class="primary">Generate document</button>
+    <span id="status" class="status"></span>
+  </div>
+</section>
+
+<section id="previewSection">
+  <h2><span class="num">6</span>Preview &amp; download</h2>
+  <div class="actions">
+    <button type="button" id="downloadBtn" class="primary">Download Word document</button>
+    <span class="hint">Saves as <code>generated.docx</code> in your Downloads folder.</span>
+  </div>
+  <div id="preview" class="preview-frame"></div>
+</section>
+
+</div>
+
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://unpkg.com/docx-preview@0.3.5/dist/docx-preview.min.js"></script>
+<script>
+(() => {
+  const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+  const PX_PER_DXA = 96 / 1440; // standard rendering: 1 inch = 1440 DXA = 96 px
+  // Small safety margin so a unit that just barely fits in the measurement
+  // doesn't get split when actually opened in Word (font metrics differ slightly).
+  const PAGE_FIT_SAFETY_PX = 6;
+
+  // --- Toolbar wiring (rich-text buttons) ---
+  document.querySelectorAll('.toolbar').forEach(tb => {
+    const targetId = tb.dataset.target;
+    tb.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('mousedown', e => e.preventDefault()); // keep selection
+      btn.addEventListener('click', () => {
+        const editor = document.getElementById(targetId);
+        editor.focus();
+        document.execCommand(btn.dataset.cmd, false, null);
+      });
+    });
+  });
+
+  // --- Text2 toggle ---
+  const useText2 = document.getElementById('useText2');
+  const text2Container = document.getElementById('text2Container');
+  useText2.addEventListener('change', () => {
+    text2Container.classList.toggle('disabled', !useText2.checked);
+  });
+
+  // --- Status helper ---
+  const statusEl = document.getElementById('status');
+  function setStatus(msg, cls = '') {
+    statusEl.textContent = msg;
+    statusEl.className = 'status ' + cls;
+  }
+
+  // --- HTML → run-list conversion ---
+  // Walks the contenteditable DOM as a sequence of LINES (not break events),
+  // which avoids the classic doubling caused by browsers emitting both a
+  // <div> boundary AND a trailing filler <br> for the same logical line.
+  // Returns a flat list of:
+  //   { text, bold, italic, underline }   or   { break: true }
+  function htmlToRuns(rootEl) {
+    const lines = [[]];
+    let hasOutput = false;
+    const currentLine = () => lines[lines.length - 1];
+    const newLine = () => lines.push([]);
+
+    function walk(node, fmt) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const t = node.textContent;
+        if (t.length > 0) {
+          currentLine().push({ ...fmt, text: t });
+          hasOutput = true;
+        }
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const tag = node.tagName.toLowerCase();
+
+      if (tag === 'br') {
+        // <br> ends the current line. Suppress leading <br>s before any output.
+        if (hasOutput) newLine();
+        return;
+      }
+
+      // Carry inline formatting down to children
+      let f = { ...fmt };
+      if (tag === 'b' || tag === 'strong') f.bold = true;
+      if (tag === 'i' || tag === 'em') f.italic = true;
+      if (tag === 'u' || tag === 'ins') f.underline = true;
+      if (tag === 'span' && node.style) {
+        const fw = node.style.fontWeight;
+        if (fw && (fw === 'bold' || parseInt(fw, 10) >= 600)) f.bold = true;
+        if (node.style.fontStyle === 'italic') f.italic = true;
+        const td = node.style.textDecoration || node.style.textDecorationLine;
+        if (td && td.includes('underline')) f.underline = true;
+      }
+
+      const isBlock = (tag === 'div' || tag === 'p' || tag === 'li');
+      if (isBlock) {
+        // A block boundary starts a new line — but only if we already have
+        // output, so a leading block doesn't produce an empty first line.
+        if (hasOutput) newLine();
+
+        // <div></div> or <div><br></div> represents ONE empty line; the
+        // newLine above already gave us that, so don't recurse further
+        // (otherwise the inner filler <br> would add a second break).
+        if ((node.textContent || '').length === 0) return;
+
+        // Strip a trailing filler <br> that browsers append inside a block —
+        // it's a layout artifact, not user-typed content.
+        let children = Array.from(node.childNodes);
+        const last = children[children.length - 1];
+        if (last && last.nodeType === Node.ELEMENT_NODE &&
+            last.tagName.toLowerCase() === 'br') {
+          children = children.slice(0, -1);
+        }
+        for (const child of children) walk(child, f);
+        return;
+      }
+
+      for (const child of node.childNodes) walk(child, f);
+    }
+
+    for (const child of rootEl.childNodes) {
+      walk(child, { bold: false, italic: false, underline: false });
+    }
+
+    // Trim trailing empty lines (cursor-position artifacts)
+    while (lines.length > 1 && lines[lines.length - 1].length === 0) lines.pop();
+
+    // Flatten lines into runs, separated by line breaks
+    const runs = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (i > 0) runs.push({ break: true });
+      for (const r of lines[i]) runs.push(r);
+    }
+    return runs;
+  }
+
+  function escapeXml(s) {
+    return s.replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+  }
+
+  // Build an XML string of <w:r>…</w:r> elements from the run list.
+  function buildRunsXml(runs, fontName, fontSize) {
+    const sz = String(fontSize * 2);
+    const f = escapeXml(fontName);
+    const fontXml = `<w:rFonts w:ascii="${f}" w:hAnsi="${f}" w:cs="${f}" w:eastAsia="${f}"/>`;
+    let out = '';
+    for (const r of runs) {
+      if (r.break) {
+        out += `<w:r><w:br/></w:r>`;
+        continue;
+      }
+      const props = [
+        fontXml,
+        r.bold ? '<w:b/><w:bCs/>' : '',
+        r.italic ? '<w:i/><w:iCs/>' : '',
+        r.underline ? '<w:u w:val="single"/>' : '',
+        `<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/>`
+      ].join('');
+      out += `<w:r><w:rPr>${props}</w:rPr><w:t xml:space="preserve">${escapeXml(r.text)}</w:t></w:r>`;
+    }
+    // If empty (user gave no text), emit a single empty run so the cell isn't blank-XML
+    if (out === '') {
+      out = `<w:r><w:rPr>${fontXml}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/></w:rPr><w:t xml:space="preserve"></w:t></w:r>`;
+    }
+    return out;
+  }
+
+  // Parse a chunk of run XML into DOM nodes that can be inserted into xmlDoc.
+  function parseRunChunk(runXml, xmlDoc) {
+    const wrapped = `<root xmlns:w="${W_NS}">${runXml}</root>`;
+    const parsed = new DOMParser().parseFromString(wrapped, 'application/xml');
+    const errNode = parsed.getElementsByTagName('parsererror')[0];
+    if (errNode) throw new Error('XML parse error in generated runs: ' + errNode.textContent);
+    return Array.from(parsed.documentElement.childNodes).map(n => xmlDoc.importNode(n, true));
+  }
+
+  // Find every <w:r> whose <w:t> text equals the given placeholder.
+  function findPlaceholderRuns(xmlDoc, placeholder) {
+    const tEls = xmlDoc.getElementsByTagNameNS(W_NS, 't');
+    const runs = [];
+    for (let i = 0; i < tEls.length; i++) {
+      if ((tEls[i].textContent || '').trim() === placeholder) {
+        let n = tEls[i];
+        while (n && !(n.namespaceURI === W_NS && n.localName === 'r')) n = n.parentNode;
+        if (n) runs.push(n);
+      }
+    }
+    return runs;
+  }
+
+  // Replace a single <w:r> node with a list of new child nodes.
+  function replaceNodeWith(oldNode, newNodes) {
+    const parent = oldNode.parentNode;
+    for (const n of newNodes) parent.insertBefore(n, oldNode);
+    parent.removeChild(oldNode);
+  }
+
+  // Walk up to find the nearest <w:tbl> ancestor of a node.
+  function findAncestorTbl(node) {
+    let n = node;
+    while (n) {
+      if (n.namespaceURI === W_NS && n.localName === 'tbl') return n;
+      n = n.parentNode;
+    }
+    return null;
+  }
+
+  // Read pgSz/pgMar from the document's sectPr.
+  function readPageGeometry(xmlDoc) {
+    const sectPrs = xmlDoc.getElementsByTagNameNS(W_NS, 'sectPr');
+    const sectPr = sectPrs[sectPrs.length - 1]; // last sectPr governs final layout
+    const def = { widthDxa: 11906, heightDxa: 16838, top: 720, right: 720, bottom: 720, left: 720 };
+    if (!sectPr) return def;
+    const pgSz = sectPr.getElementsByTagNameNS(W_NS, 'pgSz')[0];
+    const pgMar = sectPr.getElementsByTagNameNS(W_NS, 'pgMar')[0];
+    const out = { ...def };
+    if (pgSz) {
+      out.widthDxa = parseInt(pgSz.getAttributeNS(W_NS, 'w') || pgSz.getAttribute('w:w') || def.widthDxa, 10);
+      out.heightDxa = parseInt(pgSz.getAttributeNS(W_NS, 'h') || pgSz.getAttribute('w:h') || def.heightDxa, 10);
+    }
+    if (pgMar) {
+      out.top = parseInt(pgMar.getAttributeNS(W_NS, 'top') || pgMar.getAttribute('w:top') || def.top, 10);
+      out.right = parseInt(pgMar.getAttributeNS(W_NS, 'right') || pgMar.getAttribute('w:right') || def.right, 10);
+      out.bottom = parseInt(pgMar.getAttributeNS(W_NS, 'bottom') || pgMar.getAttribute('w:bottom') || def.bottom, 10);
+      out.left = parseInt(pgMar.getAttributeNS(W_NS, 'left') || pgMar.getAttribute('w:left') || def.left, 10);
+    }
+    return out;
+  }
+
+  // Add <w:cantSplit/> to every <w:tr> so Word never splits a row across a page.
+  function addCantSplitToRows(xmlDoc) {
+    const rows = xmlDoc.getElementsByTagNameNS(W_NS, 'tr');
+    for (const tr of Array.from(rows)) {
+      let trPr = null;
+      for (const child of tr.childNodes) {
+        if (child.nodeType === 1 && child.namespaceURI === W_NS && child.localName === 'trPr') {
+          trPr = child; break;
+        }
+      }
+      if (!trPr) {
+        trPr = xmlDoc.createElementNS(W_NS, 'w:trPr');
+        tr.insertBefore(trPr, tr.firstChild);
+      }
+      let has = false;
+      for (const child of trPr.childNodes) {
+        if (child.nodeType === 1 && child.namespaceURI === W_NS && child.localName === 'cantSplit') {
+          has = true; break;
+        }
+      }
+      if (!has) {
+        trPr.insertBefore(xmlDoc.createElementNS(W_NS, 'w:cantSplit'), trPr.firstChild);
+      }
+    }
+  }
+
+  // Walk the body and group elements into "units". A unit starts at every LO table
+  // (a <w:tbl> whose text contains "Learning Objective"). All following <w:tbl> and
+  // <w:p> siblings — up to but not including the next LO table or sectPr — belong
+  // to that unit. This lets us delete a whole unit cleanly.
+  function findUnitGroups(xmlDoc) {
+    const body = xmlDoc.getElementsByTagNameNS(W_NS, 'body')[0];
+    if (!body) return [];
+    const groups = [];
+    let current = null;
+    for (const child of Array.from(body.childNodes)) {
+      if (child.nodeType !== 1 || child.namespaceURI !== W_NS) continue;
+      if (child.localName === 'sectPr') break;
+      if (child.localName === 'tbl') {
+        const txt = child.textContent || '';
+        if (txt.includes('Learning Objective')) {
+          current = { nodes: [child] };
+          groups.push(current);
+        } else if (current) {
+          current.nodes.push(child);
+        }
+      } else if (child.localName === 'p') {
+        if (current) current.nodes.push(child);
+      }
+    }
+    return groups;
+  }
+
+  // Render the blob into a hidden div, measure each unit's height, return data
+  // needed to decide what fits. Cleans up the DOM node afterwards.
+  async function measureUnits(blob, pageGeom) {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:absolute;left:-99999px;top:0;visibility:hidden;';
+    document.body.appendChild(wrap);
+    try {
+      await docx.renderAsync(blob, wrap, null, {
+        className: 'docx-measure',
+        inWrapper: true,
+        ignoreWidth: false,
+        ignoreHeight: false,
+        ignoreFonts: false,
+        breakPages: false,
+        ignoreLastRenderedPageBreak: true,
+        experimental: false
+      });
+
+      // Find the page section
+      const section = wrap.querySelector('section') || wrap.querySelector('article') || wrap.firstElementChild;
+      if (!section) throw new Error('No rendered section found for measurement.');
+
+      // Derive px-per-DXA from rendered section width vs known page width
+      let pxPerDxa = PX_PER_DXA;
+      if (section.offsetWidth > 100) {
+        pxPerDxa = section.offsetWidth / pageGeom.widthDxa;
+      }
+      const pageContentHeightPx =
+        (pageGeom.heightDxa - pageGeom.top - pageGeom.bottom) * pxPerDxa;
+
+      // Tables in document order
+      const tables = Array.from(section.getElementsByTagName('table'));
+      const isLO = t => (t.textContent || '').includes('Learning Objective');
+
+      // Pair into units: each LO table, optionally followed by a non-LO (Task) table
+      const units = [];
+      let i = 0;
+      while (i < tables.length) {
+        if (!isLO(tables[i])) { i++; continue; } // safety
+        const lo = tables[i++];
+        let task = null;
+        if (i < tables.length && !isLO(tables[i])) {
+          task = tables[i++];
+        }
+        const r1 = lo.getBoundingClientRect();
+        const r2 = (task || lo).getBoundingClientRect();
+        units.push({
+          top: r1.top,
+          bottom: r2.bottom,
+          height: r2.bottom - r1.top
+        });
+      }
+
+      // Inter-unit gap (the spacer paragraph between units, if any)
+      let gap = 0;
+      if (units.length >= 2) {
+        gap = Math.max(0, units[1].top - units[0].bottom);
+      }
+
+      return { units, gap, pageContentHeightPx, pxPerDxa };
+    } finally {
+      document.body.removeChild(wrap);
+    }
+  }
+
+  // Simulate placing units sequentially on pages of fixed content height.
+  // A unit is KEPT only if it fits entirely on its current page, OR on a fresh page.
+  // A unit taller than the entire page is skipped.
+  function computeKeptUnits(units, gap, pageContentHeightPx) {
+    const kept = [];
+    const limit = pageContentHeightPx - PAGE_FIT_SAFETY_PX;
+    let pageY = 0;
+    let firstOnPage = true;
+    for (let idx = 0; idx < units.length; idx++) {
+      const h = units[idx].height;
+      const need = firstOnPage ? h : (gap + h);
+      if (pageY + need <= limit) {
+        kept.push(idx);
+        pageY += need;
+        firstOnPage = false;
+      } else if (h <= limit) {
+        // Start a new page
+        pageY = h;
+        firstOnPage = false;
+        kept.push(idx);
+      }
+      // else: too tall for any page — skip silently
+    }
+    return kept;
+  }
+
+  // --- Core processing ---
+  async function processDocument() {
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput.files[0];
+    if (!file) { setStatus('Please choose a template file first.', 'error'); return null; }
+
+    const text1Editor = document.getElementById('text1Editor');
+    if (text1Editor.textContent.trim() === '') {
+      setStatus('Please enter the Learning Objective text.', 'error'); return null;
+    }
+
+    const fontName = document.getElementById('fontSelect').value;
+    const fontSize = parseInt(document.getElementById('sizeSelect').value, 10);
+
+    const text1Runs = htmlToRuns(text1Editor);
+    const includeText2 = useText2.checked;
+    const text2Runs = includeText2 ? htmlToRuns(document.getElementById('text2Editor')) : [];
+
+    const text1Xml = buildRunsXml(text1Runs, fontName, fontSize);
+    const text2Xml = includeText2 ? buildRunsXml(text2Runs, fontName, fontSize) : null;
+
+    setStatus('Reading template…');
+    const buf = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(buf);
+    const docFile = zip.file('word/document.xml');
+    if (!docFile) throw new Error('document.xml not found inside the .docx file.');
+    const docXml = await docFile.async('string');
+
+    setStatus('Substituting placeholders…');
+    const xmlDoc = new DOMParser().parseFromString(docXml, 'application/xml');
+    const errNode = xmlDoc.getElementsByTagName('parsererror')[0];
+    if (errNode) throw new Error('Could not parse document.xml.');
+
+    // Replace all {Text1}
+    const text1RunNodes = findPlaceholderRuns(xmlDoc, '{Text1}');
+    if (text1RunNodes.length === 0) {
+      throw new Error('No {Text1} placeholders found in the template.');
+    }
+    for (const runNode of text1RunNodes) {
+      const newNodes = parseRunChunk(text1Xml, xmlDoc);
+      replaceNodeWith(runNode, newNodes);
+    }
+
+    // Handle {Text2}
+    const text2RunNodes = findPlaceholderRuns(xmlDoc, '{Text2}');
+    if (includeText2) {
+      for (const runNode of text2RunNodes) {
+        const newNodes = parseRunChunk(text2Xml, xmlDoc);
+        replaceNodeWith(runNode, newNodes);
+      }
+    } else {
+      // Delete the entire enclosing table (and following empty spacer) for each {Text2}
+      const tablesToRemove = new Set();
+      for (const runNode of text2RunNodes) {
+        const tbl = findAncestorTbl(runNode);
+        if (tbl) tablesToRemove.add(tbl);
+      }
+      for (const tbl of tablesToRemove) {
+        const next = tbl.nextSibling;
+        tbl.parentNode.removeChild(tbl);
+        if (next && next.namespaceURI === W_NS && next.localName === 'p' &&
+            (next.textContent || '').trim() === '') {
+          next.parentNode.removeChild(next);
+        }
+      }
+    }
+
+    // Add cantSplit to every row so Word doesn't split a row mid-page
+    addCantSplitToRows(xmlDoc);
+
+    // Build groupings BEFORE serialising so we can act on the same nodes later
+    const groups = findUnitGroups(xmlDoc);
+
+    // Serialise & generate intermediate blob for measurement
+    setStatus('Building intermediate document…');
+    const pageGeom = readPageGeometry(xmlDoc);
+    let workXml = new XMLSerializer().serializeToString(xmlDoc);
+    zip.file('word/document.xml', workXml);
+    let blob = await zip.generateAsync({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      compression: 'DEFLATE'
+    });
+
+    // Measure each unit's rendered height
+    setStatus('Measuring page fit…');
+    let measurement;
+    try {
+      measurement = await measureUnits(blob, pageGeom);
+    } catch (e) {
+      console.warn('Measurement failed; returning untrimmed document.', e);
+      return { blob, kept: groups.length, total: groups.length, trimmed: 0, measureFailed: true };
+    }
+
+    if (measurement.units.length !== groups.length) {
+      console.warn(`Unit count mismatch: ${groups.length} XML groups vs ${measurement.units.length} rendered units.`);
+    }
+
+    // Decide what fits
+    const keptIndices = computeKeptUnits(
+      measurement.units, measurement.gap, measurement.pageContentHeightPx
+    );
+
+    if (keptIndices.length < groups.length) {
+      setStatus('Trimming units that would split across pages…');
+      const keptSet = new Set(keptIndices);
+      for (let i = 0; i < groups.length; i++) {
+        if (keptSet.has(i)) continue;
+        for (const node of groups[i].nodes) {
+          if (node.parentNode) node.parentNode.removeChild(node);
+        }
+      }
+      // Regenerate
+      workXml = new XMLSerializer().serializeToString(xmlDoc);
+      zip.file('word/document.xml', workXml);
+      blob = await zip.generateAsync({
+        type: 'blob',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        compression: 'DEFLATE'
+      });
+    }
+
+    return {
+      blob,
+      kept: keptIndices.length,
+      total: groups.length,
+      trimmed: groups.length - keptIndices.length,
+      measureFailed: false
+    };
+  }
+
+  // --- Generate button ---
+  let lastBlob = null;
+  document.getElementById('generateBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    try {
+      const result = await processDocument();
+      if (!result) { btn.disabled = false; return; }
+      lastBlob = result.blob;
+
+      // Reveal the preview section FIRST so the download button is available
+      // even if rendering fails for any reason.
+      const previewSection = document.getElementById('previewSection');
+      previewSection.style.display = 'block';
+
+      setStatus('Rendering preview…');
+      const previewEl = document.getElementById('preview');
+      previewEl.innerHTML = '';
+      let renderOk = true;
+      try {
+        await docx.renderAsync(result.blob, previewEl, null, {
+          className: 'docx',
+          inWrapper: true,
+          ignoreWidth: false,
+          ignoreHeight: false,
+          ignoreFonts: false,
+          breakPages: true,
+          experimental: true
+        });
+      } catch (renderErr) {
+        renderOk = false;
+        console.error('Preview render failed:', renderErr);
+        previewEl.innerHTML = '<div style="padding:20px;color:#8b3a2a;">' +
+          'Preview could not be rendered, but the document was generated successfully. ' +
+          'Click <strong>Download Word document</strong> above to save it.</div>';
+      }
+
+      // Build status message
+      let msg;
+      if (result.kept === 0) {
+        msg = 'No units fit on a page — your text is too long. Try a smaller font or shorter text.';
+        setStatus(msg, 'error');
+      } else if (result.trimmed > 0) {
+        msg = `Done. Kept ${result.kept} of ${result.total} units; removed ${result.trimmed} that would have split across pages.`;
+        setStatus(msg, 'success');
+      } else if (result.measureFailed) {
+        msg = 'Done — but page-fit check failed, so the document was not trimmed.';
+        setStatus(msg, 'success');
+      } else {
+        msg = `Done. All ${result.kept} units fit cleanly.`;
+        setStatus(msg, 'success');
+      }
+      previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      console.error(err);
+      setStatus('Error: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  // --- Download button ---
+  document.getElementById('downloadBtn').addEventListener('click', () => {
+    if (!lastBlob) return;
+    const url = URL.createObjectURL(lastBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'generated.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  });
+
+})();
+</script>
+</body>
+</html>
