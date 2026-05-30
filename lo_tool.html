@@ -1187,6 +1187,44 @@
     }
   }
 
+  // The check-mark glyph U+2713 (✓) renders correctly in Arial/Calibri, but if
+  // the placeholder's run carries <w:rtl/> or a complex-script font (cs=) from
+  // the template, Word treats the tick as a complex-script char and falls back
+  // to the cs font — which can produce a Hebrew-looking glyph. Force a clean
+  // Latin font for runs that now hold a tick.
+  function normalizeRunForTick(tNode) {
+    let r = tNode.parentNode;
+    while (r && !(r.namespaceURI === W_NS && r.localName === 'r')) r = r.parentNode;
+    if (!r) return;
+    let rPr = null;
+    for (const c of Array.from(r.childNodes)) {
+      if (c.nodeType === 1 && c.namespaceURI === W_NS && c.localName === 'rPr') { rPr = c; break; }
+    }
+    if (!rPr) {
+      rPr = r.ownerDocument.createElementNS(W_NS, 'w:rPr');
+      r.insertBefore(rPr, r.firstChild);
+    }
+    // Drop <w:rtl/> and <w:cs/> so Word doesn't pick a complex-script font.
+    for (const c of Array.from(rPr.childNodes)) {
+      if (c.nodeType === 1 && c.namespaceURI === W_NS &&
+          (c.localName === 'rtl' || c.localName === 'cs')) {
+        rPr.removeChild(c);
+      }
+    }
+    // Replace any existing <w:rFonts> with explicit Arial across all scripts.
+    for (const c of Array.from(rPr.childNodes)) {
+      if (c.nodeType === 1 && c.namespaceURI === W_NS && c.localName === 'rFonts') {
+        rPr.removeChild(c);
+      }
+    }
+    const rFonts = r.ownerDocument.createElementNS(W_NS, 'w:rFonts');
+    rFonts.setAttributeNS(W_NS, 'w:ascii', 'Arial');
+    rFonts.setAttributeNS(W_NS, 'w:hAnsi', 'Arial');
+    rFonts.setAttributeNS(W_NS, 'w:cs', 'Arial');
+    rFonts.setAttributeNS(W_NS, 'w:eastAsia', 'Arial');
+    rPr.insertBefore(rFonts, rPr.firstChild);
+  }
+
   let rLastBlob = null;
 
   async function generateReport() {
@@ -1313,6 +1351,9 @@
       for (let i = 0; i < ts.length; i++) {
         if (buffers[i] !== (ts[i].textContent || '')) {
           replaceTagRunText(ts[i], buffers[i]);
+          if (buffers[i].indexOf(tick) !== -1) {
+            normalizeRunForTick(ts[i]);
+          }
         }
       }
     }
