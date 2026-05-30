@@ -256,15 +256,96 @@
     justify-content: space-between;
     margin-bottom: 12px;
   }
+  .mode-switcher {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+  .mode-btn {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 10px 20px;
+    background: white;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    cursor: pointer;
+    color: var(--ink-soft);
+    transition: background 0.12s;
+  }
+  .mode-btn:hover { background: var(--accent-soft); }
+  .mode-btn.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  input[type=text], textarea {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    background: white;
+    width: 100%;
+    max-width: 520px;
+  }
+  input[type=text]:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; font-family: Georgia, serif; line-height: 1.45; }
+  .field input[type=text], .field textarea { max-width: 100%; }
+  .field.wide { flex: 1 1 220px; min-width: 220px; }
+  .subject-grid { display: flex; flex-direction: column; gap: 0; }
+  .grid-head, .grid-row {
+    display: grid;
+    grid-template-columns: 170px 1fr 1.4fr;
+    gap: 14px;
+    align-items: start;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .grid-head {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--rule);
+  }
+  .grid-name { font-size: 14px; font-weight: 500; padding-top: 2px; }
+  .grid-opts { display: flex; flex-direction: column; gap: 4px; }
+  .grid-opts .opt {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 2px;
+  }
+  .grid-opts .opt:hover { background: var(--accent-soft); }
+  .grid-opts input[type=radio] { accent-color: var(--accent); }
+  .targets-grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+  .targets-grid .field { gap: 4px; }
+  @media (max-width: 700px) {
+    .grid-head, .grid-row { grid-template-columns: 1fr; }
+    .targets-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
 <header>
-  <h1>Learning Objective Document Generator</h1>
-  <p>Fill in the placeholders, choose a font, and generate a Word document.</p>
+  <h1>Document Generator</h1>
+  <p>Generate Learning Objective documents or fill in the school report template.</p>
 </header>
+
+<div class="mode-switcher">
+  <button type="button" id="modeLoBtn" class="mode-btn active">Learning Objective</button>
+  <button type="button" id="modeReportBtn" class="mode-btn">Report</button>
+</div>
+
+<div id="loMode">
 
 <section>
   <h2><span class="num">1</span>Template file</h2>
@@ -352,6 +433,82 @@
   </div>
   <div id="preview" class="preview-frame"></div>
 </section>
+
+</div><!-- /loMode -->
+
+<div id="reportMode" hidden>
+
+  <section>
+    <h2><span class="num">1</span>Report template</h2>
+    <input type="file" id="rFileInput" accept=".docx">
+    <div class="hint">Upload the school report template containing the subject placeholders (e.g. <code>{R_ARTH}</code>, <code>{FirstName}</code>, <code>{Body}</code>).</div>
+  </section>
+
+  <section>
+    <h2><span class="num">2</span>Pupil</h2>
+    <div class="row">
+      <div class="field wide">
+        <label for="rFirstName">First name</label>
+        <input type="text" id="rFirstName" placeholder="e.g. Eleanor">
+      </div>
+      <div class="field wide">
+        <label for="rSurname">Surname</label>
+        <input type="text" id="rSurname" placeholder="e.g. Hetherington">
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">3</span>Report body</h2>
+    <div class="toolbar" data-target="rBodyEditor">
+      <button type="button" data-cmd="bold" title="Bold"><span class="b">B</span></button>
+      <button type="button" data-cmd="italic" title="Italic"><span class="i">I</span></button>
+      <button type="button" data-cmd="underline" title="Underline"><span class="u">U</span></button>
+    </div>
+    <div id="rBodyEditor" class="editor" contenteditable="true"
+         data-placeholder="Paste the report body here. Line breaks and Ctrl+B/I/U formatting are preserved."></div>
+    <div class="hint">Replaces the <code>{Body}</code> placeholder.</div>
+  </section>
+
+  <section>
+    <h2><span class="num">4</span>Core subjects</h2>
+    <div id="coreGrid" class="subject-grid"></div>
+  </section>
+
+  <section>
+    <h2><span class="num">5</span>Foundation subjects</h2>
+    <div id="foundGrid" class="subject-grid"></div>
+  </section>
+
+  <section>
+    <h2><span class="num">6</span>Next steps</h2>
+    <div class="targets-grid">
+      <div class="field"><label for="rReadingTarget">Reading target</label><textarea id="rReadingTarget" rows="2"></textarea></div>
+      <div class="field"><label for="rWritingTarget">Writing target</label><textarea id="rWritingTarget" rows="2"></textarea></div>
+      <div class="field"><label for="rSLTarget">Speaking &amp; Listening target</label><textarea id="rSLTarget" rows="2"></textarea></div>
+      <div class="field"><label for="rMathsTarg1">Maths target 1</label><textarea id="rMathsTarg1" rows="2"></textarea></div>
+      <div class="field"><label for="rMathsTarg2">Maths target 2</label><textarea id="rMathsTarg2" rows="2"></textarea></div>
+    </div>
+    <div class="hint">Leave blank to delete the placeholder.</div>
+  </section>
+
+  <section>
+    <h2><span class="num">7</span>Generate</h2>
+    <div class="actions">
+      <button type="button" id="rGenerateBtn" class="primary">Generate report</button>
+      <span id="rStatus" class="status"></span>
+    </div>
+  </section>
+
+  <section id="rPreviewSection" hidden>
+    <h2><span class="num">8</span>Preview &amp; download</h2>
+    <div class="actions">
+      <button type="button" id="rDownloadBtn" class="primary">Download Word document</button>
+    </div>
+    <div id="rPreview" class="preview-frame"></div>
+  </section>
+
+</div><!-- /reportMode -->
 
 </div>
 
@@ -917,6 +1074,289 @@
     const a = document.createElement('a');
     a.href = url;
     a.download = 'generated.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  });
+
+  // =========================================================================
+  // ============================  REPORT MODE  ==============================
+  // =========================================================================
+
+  const EFFORT = [
+    { sfx: 'ARTH',   label: 'Always tries hard' },
+    { sfx: 'THMOTT', label: 'Tries hard most of the time' },
+    { sfx: 'MSEIN',  label: 'More sustained effort is needed' },
+  ];
+  const CORE_ATT = [
+    { sfx: 'BARE',  label: 'Below ARE' },
+    { sfx: 'JBARE', label: 'Just below ARE' },
+    { sfx: 'WARE',  label: 'Within ARE' },
+    { sfx: 'UARE',  label: 'Upper end of ARE' },
+    { sfx: 'AARE',  label: 'Above ARE' },
+  ];
+  const FOUND_ATT = [
+    { sfx: 'WTARE', label: 'Working towards ARE' },
+    { sfx: 'WWARE', label: 'Working within ARE' },
+  ];
+  const CORE_SUBJ = [
+    { key: 'R',  name: 'Reading' },
+    { key: 'W',  name: 'Writing' },
+    { key: 'SL', name: 'Speaking & Listening' },
+    { key: 'M',  name: 'Maths' },
+    { key: 'RE', name: 'Religious Education' },
+  ];
+  const FOUND_SUBJ = [
+    { key: 'SCI',  name: 'Science' },
+    { key: 'HIS',  name: 'History' },
+    { key: 'GEO',  name: 'Geography' },
+    { key: 'ART',  name: 'Art' },
+    { key: 'DT',   name: 'Design Technology' },
+    { key: 'MUS',  name: 'Music' },
+    { key: 'PE',   name: 'Physical Education' },
+    { key: 'PSHE', name: 'PSHE' },
+    { key: 'COMP', name: 'Computing' },
+    { key: 'FR',   name: 'French' },
+  ];
+
+  function buildGrid(containerId, subjects, attainment) {
+    const c = document.getElementById(containerId);
+    let html = `<div class="grid-head">
+        <span class="grid-name">Subject</span>
+        <span>Effort</span>
+        <span>Attainment</span>
+      </div>`;
+    for (const s of subjects) {
+      html += `<div class="grid-row"><span class="grid-name">${s.name}</span>`;
+      html += '<span class="grid-opts">';
+      for (const e of EFFORT) {
+        html += `<label class="opt"><input type="radio" name="eff_${s.key}" value="${e.sfx}"> ${e.label}</label>`;
+      }
+      html += '</span><span class="grid-opts">';
+      for (const a of attainment) {
+        html += `<label class="opt"><input type="radio" name="att_${s.key}" value="${a.sfx}"> ${a.label}</label>`;
+      }
+      html += '</span></div>';
+    }
+    c.innerHTML = html;
+  }
+
+  buildGrid('coreGrid',  CORE_SUBJ,  CORE_ATT);
+  buildGrid('foundGrid', FOUND_SUBJ, FOUND_ATT);
+
+  // --- Mode switching ---
+  const loModeEl = document.getElementById('loMode');
+  const reportModeEl = document.getElementById('reportMode');
+  const modeLoBtn = document.getElementById('modeLoBtn');
+  const modeReportBtn = document.getElementById('modeReportBtn');
+  modeLoBtn.addEventListener('click', () => {
+    loModeEl.hidden = false; reportModeEl.hidden = true;
+    modeLoBtn.classList.add('active'); modeReportBtn.classList.remove('active');
+  });
+  modeReportBtn.addEventListener('click', () => {
+    loModeEl.hidden = true; reportModeEl.hidden = false;
+    modeReportBtn.classList.add('active'); modeLoBtn.classList.remove('active');
+  });
+
+  // --- Report status ---
+  const rStatusEl = document.getElementById('rStatus');
+  function setRStatus(msg, cls = '') {
+    rStatusEl.textContent = msg;
+    rStatusEl.className = 'status ' + cls;
+  }
+
+  // Replace a {Tag} run with plain text (preserving the run's formatting).
+  function replaceTagRunText(tNode, newText) {
+    tNode.textContent = newText;
+    if (newText.startsWith(' ') || newText.endsWith(' ') || newText === '') {
+      tNode.setAttribute('xml:space', 'preserve');
+    }
+  }
+
+  let rLastBlob = null;
+
+  async function generateReport() {
+    const file = document.getElementById('rFileInput').files[0];
+    if (!file) { setRStatus('Please choose a template file first.', 'error'); return; }
+
+    setRStatus('Reading template…');
+    const buf = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(buf);
+    const docFile = zip.file('word/document.xml');
+    if (!docFile) throw new Error('document.xml not found in the .docx file.');
+    const docXml = await docFile.async('string');
+    const xmlDoc = new DOMParser().parseFromString(docXml, 'application/xml');
+    const errNode = xmlDoc.getElementsByTagName('parsererror')[0];
+    if (errNode) throw new Error('Could not parse document.xml.');
+
+    // Build the replacement map
+    const replacements = {};
+    replacements['{FirstName}']           = document.getElementById('rFirstName').value;
+    replacements['{Surname}']             = document.getElementById('rSurname').value;
+    replacements['{ReadingTarget}']       = document.getElementById('rReadingTarget').value;
+    replacements['{WritingTarget}']       = document.getElementById('rWritingTarget').value;
+    replacements['{SpeakingAndListening}']= document.getElementById('rSLTarget').value;
+    replacements['{MathsTarg1}']          = document.getElementById('rMathsTarg1').value;
+    replacements['{MathsTarg2}']          = document.getElementById('rMathsTarg2').value;
+
+    const tick = '✓';
+    const groups = [
+      { subjects: CORE_SUBJ,  att: CORE_ATT },
+      { subjects: FOUND_SUBJ, att: FOUND_ATT },
+    ];
+    for (const g of groups) {
+      for (const s of g.subjects) {
+        const effChecked = document.querySelector(`input[name="eff_${s.key}"]:checked`);
+        const attChecked = document.querySelector(`input[name="att_${s.key}"]:checked`);
+        const effChosen = effChecked ? effChecked.value : null;
+        const attChosen = attChecked ? attChecked.value : null;
+        for (const e of EFFORT) {
+          replacements[`{${s.key}_${e.sfx}}`] = (e.sfx === effChosen) ? tick : '';
+        }
+        for (const a of g.att) {
+          replacements[`{${s.key}_${a.sfx}}`] = (a.sfx === attChosen) ? tick : '';
+        }
+      }
+    }
+
+    setRStatus('Substituting placeholders…');
+
+    // Body is rich text — handled by replacing its enclosing <w:r> with new runs
+    const bodyRuns = htmlToRuns(document.getElementById('rBodyEditor'));
+    const bodyXml = buildRunsXml(bodyRuns, 'Arial', 11);
+    const bodyRunNodes = findPlaceholderRuns(xmlDoc, '{Body}');
+    for (const runNode of bodyRunNodes) {
+      const newNodes = parseRunChunk(bodyXml, xmlDoc);
+      replaceNodeWith(runNode, newNodes);
+    }
+
+    // Walk every paragraph, stitching <w:t> texts together so that placeholders
+    // split across multiple runs (e.g. "{" + "ReadingTarget" + "}") can still
+    // be matched. Substitutions write the replacement into the first <w:t> of
+    // the matched span and clear the remaining ones.
+    const pEls = Array.from(xmlDoc.getElementsByTagNameNS(W_NS, 'p'));
+    for (const p of pEls) {
+      const ts = Array.from(p.getElementsByTagNameNS(W_NS, 't'));
+      if (ts.length === 0) continue;
+      // Build concatenated text + index map: for each char, which <w:t> it lives in.
+      let full = '';
+      const owner = []; // owner[i] = index into ts for char i
+      for (let i = 0; i < ts.length; i++) {
+        const txt = ts[i].textContent || '';
+        for (let j = 0; j < txt.length; j++) owner.push(i);
+        full += txt;
+      }
+      if (full.indexOf('{') === -1) continue;
+
+      // Find each {Tag} occurrence and stage its replacement
+      const edits = []; // { firstT, lastT, replacement }
+      const re = /\{[A-Za-z0-9_]+\}/g;
+      let m;
+      while ((m = re.exec(full)) !== null) {
+        const tag = m[0];
+        if (!Object.prototype.hasOwnProperty.call(replacements, tag)) continue;
+        const startIdx = m.index;
+        const endIdx = startIdx + tag.length - 1;
+        edits.push({
+          firstT: owner[startIdx],
+          lastT: owner[endIdx],
+          startChar: startIdx,
+          endChar: endIdx,
+          replacement: replacements[tag],
+        });
+      }
+      if (edits.length === 0) continue;
+
+      // Apply edits in reverse order, working with per-<w:t> char ranges.
+      // For each edit, compute, for every covered <w:t>, the start/end offset
+      // within that <w:t>'s original text, and splice.
+      // Track per-<w:t> running text as we mutate.
+      const buffers = ts.map(t => t.textContent || '');
+      // For each char position, we also need its offset within its owner <w:t>:
+      const ownerOffset = [];
+      {
+        let last = -1, off = 0;
+        for (let i = 0; i < owner.length; i++) {
+          if (owner[i] !== last) { off = 0; last = owner[i]; }
+          ownerOffset.push(off++);
+        }
+      }
+      // Apply in reverse so earlier offsets stay valid
+      edits.sort((a,b) => b.startChar - a.startChar);
+      for (const ed of edits) {
+        const firstOff = ownerOffset[ed.startChar];
+        const lastOff  = ownerOffset[ed.endChar];
+        if (ed.firstT === ed.lastT) {
+          const buf = buffers[ed.firstT];
+          buffers[ed.firstT] = buf.slice(0, firstOff) + ed.replacement + buf.slice(lastOff + 1);
+        } else {
+          // Trim first <w:t> after firstOff; clear middle ones; trim last <w:t> before lastOff+1
+          buffers[ed.firstT] = buffers[ed.firstT].slice(0, firstOff) + ed.replacement;
+          for (let k = ed.firstT + 1; k < ed.lastT; k++) buffers[k] = '';
+          buffers[ed.lastT]  = buffers[ed.lastT].slice(lastOff + 1);
+        }
+      }
+      for (let i = 0; i < ts.length; i++) {
+        if (buffers[i] !== (ts[i].textContent || '')) {
+          replaceTagRunText(ts[i], buffers[i]);
+        }
+      }
+    }
+
+    const newXml = new XMLSerializer().serializeToString(xmlDoc);
+    zip.file('word/document.xml', newXml);
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      compression: 'DEFLATE'
+    });
+    rLastBlob = blob;
+
+    // Preview
+    const ps = document.getElementById('rPreviewSection');
+    ps.hidden = false;
+    const previewEl = document.getElementById('rPreview');
+    previewEl.innerHTML = '';
+    setRStatus('Rendering preview…');
+    try {
+      await docx.renderAsync(blob, previewEl, null, {
+        className: 'docx',
+        inWrapper: true,
+        ignoreWidth: false,
+        ignoreHeight: false,
+        ignoreFonts: false,
+        breakPages: true,
+        experimental: true
+      });
+    } catch (e) {
+      console.error('Preview render failed:', e);
+      previewEl.innerHTML = '<div style="padding:20px;color:#8b3a2a;">' +
+        'Preview could not be rendered, but the document generated successfully. ' +
+        'Click <strong>Download Word document</strong> above to save it.</div>';
+    }
+    setRStatus('Report generated.', 'success');
+    ps.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  document.getElementById('rGenerateBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('rGenerateBtn');
+    btn.disabled = true;
+    try { await generateReport(); }
+    catch (e) { console.error(e); setRStatus('Error: ' + e.message, 'error'); }
+    finally { btn.disabled = false; }
+  });
+
+  document.getElementById('rDownloadBtn').addEventListener('click', () => {
+    if (!rLastBlob) return;
+    const url = URL.createObjectURL(rLastBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safe = s => (s || '').trim().replace(/[^\w\-]+/g, '_');
+    const fn = safe(document.getElementById('rFirstName').value);
+    const sn = safe(document.getElementById('rSurname').value);
+    const parts = [fn, sn].filter(Boolean);
+    a.download = (parts.length ? parts.join('_') + '_report' : 'report') + '.docx';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
