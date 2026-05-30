@@ -493,7 +493,20 @@
   </section>
 
   <section>
-    <h2><span class="num">7</span>Generate</h2>
+    <h2><span class="num">7</span>Save / load progress</h2>
+    <div class="actions">
+      <button type="button" id="rSaveJsonBtn" class="secondary">Download progress (JSON)</button>
+      <label class="inline" style="cursor:pointer;">
+        <span class="mode-btn" style="margin:0;">Load progress (JSON)…</span>
+        <input type="file" id="rLoadJsonInput" accept=".json,application/json" style="display:none;">
+      </label>
+      <span id="rJsonStatus" class="status"></span>
+    </div>
+    <div class="hint">Saves all fields, body text and ticks so you can resume later. The downloaded JSON matches your report-import format.</div>
+  </section>
+
+  <section>
+    <h2><span class="num">8</span>Generate</h2>
     <div class="actions">
       <button type="button" id="rGenerateBtn" class="primary">Generate report</button>
       <span id="rStatus" class="status"></span>
@@ -501,7 +514,7 @@
   </section>
 
   <section id="rPreviewSection" hidden>
-    <h2><span class="num">8</span>Preview &amp; download</h2>
+    <h2><span class="num">9</span>Preview &amp; download</h2>
     <div class="actions">
       <button type="button" id="rDownloadBtn" class="primary">Download Word document</button>
     </div>
@@ -1345,6 +1358,147 @@
     try { await generateReport(); }
     catch (e) { console.error(e); setRStatus('Error: ' + e.message, 'error'); }
     finally { btn.disabled = false; }
+  });
+
+  // --- JSON save / load (resume report mid-way) ---
+  const rJsonStatusEl = document.getElementById('rJsonStatus');
+  function setRJsonStatus(msg, cls = '') {
+    rJsonStatusEl.textContent = msg;
+    rJsonStatusEl.className = 'status ' + cls;
+  }
+
+  function collectReportState() {
+    const firstName = document.getElementById('rFirstName').value.trim();
+    const surname   = document.getElementById('rSurname').value.trim();
+    const child = [firstName, surname].filter(Boolean).join(' ');
+    const fileStem = [surname, firstName].filter(Boolean).join(', ');
+
+    const targets = {
+      ReadingTarget:        document.getElementById('rReadingTarget').value,
+      WritingTarget:        document.getElementById('rWritingTarget').value,
+      SpeakingAndListening: document.getElementById('rSLTarget').value,
+      MathsTarg1:           document.getElementById('rMathsTarg1').value,
+      MathsTarg2:           document.getElementById('rMathsTarg2').value,
+    };
+
+    const tick_placeholders = [];
+    const groups = [
+      { subjects: CORE_SUBJ,  att: CORE_ATT },
+      { subjects: FOUND_SUBJ, att: FOUND_ATT },
+    ];
+    for (const g of groups) {
+      for (const s of g.subjects) {
+        const eff = document.querySelector(`input[name="eff_${s.key}"]:checked`);
+        const att = document.querySelector(`input[name="att_${s.key}"]:checked`);
+        if (eff) tick_placeholders.push(`${s.key}_${eff.value}`);
+        if (att) tick_placeholders.push(`${s.key}_${att.value}`);
+      }
+    }
+
+    const bodyEditor = document.getElementById('rBodyEditor');
+    return {
+      child,
+      first_name: firstName,
+      surname: surname,
+      body_file:   fileStem ? `${fileStem}.md` : '',
+      output_file: fileStem ? `${fileStem} - Annual Report.docx` : '',
+      targets,
+      tick_placeholders,
+      body: bodyEditor.textContent || '',
+      body_html: bodyEditor.innerHTML || '',
+    };
+  }
+
+  function applyReportState(data) {
+    if (!data || typeof data !== 'object') throw new Error('Not a valid JSON object.');
+
+    if (typeof data.first_name === 'string') document.getElementById('rFirstName').value = data.first_name;
+    if (typeof data.surname === 'string')    document.getElementById('rSurname').value   = data.surname;
+
+    if (!data.first_name && !data.surname && typeof data.child === 'string') {
+      const bits = data.child.trim().split(/\s+/);
+      if (bits.length >= 1) document.getElementById('rFirstName').value = bits[0];
+      if (bits.length >= 2) document.getElementById('rSurname').value   = bits.slice(1).join(' ');
+    }
+
+    const t = data.targets || {};
+    if (typeof t.ReadingTarget === 'string')        document.getElementById('rReadingTarget').value = t.ReadingTarget;
+    if (typeof t.WritingTarget === 'string')        document.getElementById('rWritingTarget').value = t.WritingTarget;
+    if (typeof t.SpeakingAndListening === 'string') document.getElementById('rSLTarget').value      = t.SpeakingAndListening;
+    if (typeof t.MathsTarg1 === 'string')           document.getElementById('rMathsTarg1').value    = t.MathsTarg1;
+    if (typeof t.MathsTarg2 === 'string')           document.getElementById('rMathsTarg2').value    = t.MathsTarg2;
+
+    const bodyEditor = document.getElementById('rBodyEditor');
+    if (typeof data.body_html === 'string' && data.body_html.length > 0) {
+      bodyEditor.innerHTML = data.body_html;
+    } else if (typeof data.body === 'string') {
+      bodyEditor.innerHTML = '';
+      const lines = data.body.split(/\r?\n/);
+      for (let i = 0; i < lines.length; i++) {
+        if (i > 0) bodyEditor.appendChild(document.createElement('br'));
+        bodyEditor.appendChild(document.createTextNode(lines[i]));
+      }
+    }
+
+    // Clear all radios first, then apply ticks
+    document.querySelectorAll('#coreGrid input[type=radio], #foundGrid input[type=radio]')
+      .forEach(r => { r.checked = false; });
+    const ticks = Array.isArray(data.tick_placeholders) ? data.tick_placeholders : [];
+    const effortSfx = new Set(EFFORT.map(e => e.sfx));
+    const attSfx = new Set([...CORE_ATT, ...FOUND_ATT].map(a => a.sfx));
+    const allSubj = [...CORE_SUBJ, ...FOUND_SUBJ];
+    for (const raw of ticks) {
+      const tag = String(raw).replace(/^\{|\}$/g, '');
+      const idx = tag.lastIndexOf('_');
+      if (idx < 1) continue;
+      const subjKey = tag.slice(0, idx);
+      const sfx = tag.slice(idx + 1);
+      if (!allSubj.some(s => s.key === subjKey)) continue;
+      const name = effortSfx.has(sfx) ? `eff_${subjKey}`
+                 : attSfx.has(sfx)    ? `att_${subjKey}`
+                 : null;
+      if (!name) continue;
+      const radio = document.querySelector(`input[name="${name}"][value="${sfx}"]`);
+      if (radio) radio.checked = true;
+    }
+  }
+
+  document.getElementById('rSaveJsonBtn').addEventListener('click', () => {
+    try {
+      const data = collectReportState();
+      const json = JSON.stringify(data, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safe = s => (s || '').trim().replace(/[^\w\-]+/g, '_');
+      const stem = [safe(data.surname), safe(data.first_name)].filter(Boolean).join('_');
+      a.download = (stem || 'report') + '_progress.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+      setRJsonStatus('Progress saved.', 'success');
+    } catch (e) {
+      console.error(e);
+      setRJsonStatus('Error: ' + e.message, 'error');
+    }
+  });
+
+  document.getElementById('rLoadJsonInput').addEventListener('change', async (ev) => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      applyReportState(data);
+      setRJsonStatus('Progress loaded from ' + file.name + '.', 'success');
+    } catch (e) {
+      console.error(e);
+      setRJsonStatus('Error loading JSON: ' + e.message, 'error');
+    } finally {
+      ev.target.value = '';
+    }
   });
 
   document.getElementById('rDownloadBtn').addEventListener('click', () => {
