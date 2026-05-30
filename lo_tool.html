@@ -438,14 +438,29 @@
 
 <div id="reportMode" hidden>
 
-  <section>
-    <h2><span class="num">1</span>Report template</h2>
-    <input type="file" id="rFileInput" accept=".docx">
-    <div class="hint">Upload the school report template containing the subject placeholders (e.g. <code>{R_ARTH}</code>, <code>{FirstName}</code>, <code>{Body}</code>).</div>
-  </section>
+  <div class="row">
+    <section style="flex:1 1 320px; min-width:280px;">
+      <h2><span class="num">1</span>Report template</h2>
+      <input type="file" id="rFileInput" accept=".docx">
+      <div class="hint">Upload the school report template containing the subject placeholders (e.g. <code>{R_ARTH}</code>, <code>{FirstName}</code>, <code>{Body}</code>).</div>
+    </section>
+
+    <section style="flex:1 1 320px; min-width:280px;">
+      <h2><span class="num">2</span>Save / load progress</h2>
+      <div class="actions">
+        <button type="button" id="rSaveJsonBtn" class="secondary">Download progress (JSON)</button>
+        <label class="inline" style="cursor:pointer;">
+          <span class="mode-btn" style="margin:0;">Load progress (JSON)…</span>
+          <input type="file" id="rLoadJsonInput" accept=".json,application/json" style="display:none;">
+        </label>
+        <span id="rJsonStatus" class="status"></span>
+      </div>
+      <div class="hint">Saves all fields, body text and ticks so you can resume later. The downloaded JSON matches your report-import format. <code>Body</code> is optional on load.</div>
+    </section>
+  </div>
 
   <section>
-    <h2><span class="num">2</span>Pupil</h2>
+    <h2><span class="num">3</span>Pupil</h2>
     <div class="row">
       <div class="field wide">
         <label for="rFirstName">First name</label>
@@ -459,7 +474,7 @@
   </section>
 
   <section>
-    <h2><span class="num">3</span>Report body</h2>
+    <h2><span class="num">4</span>Report body</h2>
     <div class="toolbar" data-target="rBodyEditor">
       <button type="button" data-cmd="bold" title="Bold"><span class="b">B</span></button>
       <button type="button" data-cmd="italic" title="Italic"><span class="i">I</span></button>
@@ -471,17 +486,17 @@
   </section>
 
   <section>
-    <h2><span class="num">4</span>Core subjects</h2>
+    <h2><span class="num">5</span>Core subjects</h2>
     <div id="coreGrid" class="subject-grid"></div>
   </section>
 
   <section>
-    <h2><span class="num">5</span>Foundation subjects</h2>
+    <h2><span class="num">6</span>Foundation subjects</h2>
     <div id="foundGrid" class="subject-grid"></div>
   </section>
 
   <section>
-    <h2><span class="num">6</span>Next steps</h2>
+    <h2><span class="num">7</span>Next steps</h2>
     <div class="targets-grid">
       <div class="field"><label for="rReadingTarget">Reading target</label><textarea id="rReadingTarget" rows="2"></textarea></div>
       <div class="field"><label for="rWritingTarget">Writing target</label><textarea id="rWritingTarget" rows="2"></textarea></div>
@@ -490,19 +505,6 @@
       <div class="field"><label for="rMathsTarg2">Maths target 2</label><textarea id="rMathsTarg2" rows="2"></textarea></div>
     </div>
     <div class="hint">Leave blank to delete the placeholder.</div>
-  </section>
-
-  <section>
-    <h2><span class="num">7</span>Save / load progress</h2>
-    <div class="actions">
-      <button type="button" id="rSaveJsonBtn" class="secondary">Download progress (JSON)</button>
-      <label class="inline" style="cursor:pointer;">
-        <span class="mode-btn" style="margin:0;">Load progress (JSON)…</span>
-        <input type="file" id="rLoadJsonInput" accept=".json,application/json" style="display:none;">
-      </label>
-      <span id="rJsonStatus" class="status"></span>
-    </div>
-    <div class="hint">Saves all fields, body text and ticks so you can resume later. The downloaded JSON matches your report-import format.</div>
   </section>
 
   <section>
@@ -1437,6 +1439,7 @@
     }
 
     const bodyEditor = document.getElementById('rBodyEditor');
+    const bodyText = bodyEditor.innerText || bodyEditor.textContent || '';
     return {
       child,
       first_name: firstName,
@@ -1445,7 +1448,8 @@
       output_file: fileStem ? `${fileStem} - Annual Report.docx` : '',
       targets,
       tick_placeholders,
-      body: bodyEditor.textContent || '',
+      Body: bodyText,
+      body: bodyText,
       body_html: bodyEditor.innerHTML || '',
     };
   }
@@ -1470,16 +1474,20 @@
     if (typeof t.MathsTarg2 === 'string')           document.getElementById('rMathsTarg2').value    = t.MathsTarg2;
 
     const bodyEditor = document.getElementById('rBodyEditor');
+    const plainBody = typeof data.Body === 'string' ? data.Body
+                    : typeof data.body === 'string' ? data.body
+                    : null;
     if (typeof data.body_html === 'string' && data.body_html.length > 0) {
       bodyEditor.innerHTML = data.body_html;
-    } else if (typeof data.body === 'string') {
+    } else if (plainBody !== null) {
       bodyEditor.innerHTML = '';
-      const lines = data.body.split(/\r?\n/);
+      const lines = plainBody.split(/\r?\n/);
       for (let i = 0; i < lines.length; i++) {
         if (i > 0) bodyEditor.appendChild(document.createElement('br'));
         bodyEditor.appendChild(document.createTextNode(lines[i]));
       }
     }
+    // Body is optional: if absent from JSON, leave the editor as-is.
 
     // Clear all radios first, then apply ticks
     document.querySelectorAll('#coreGrid input[type=radio], #foundGrid input[type=radio]')
